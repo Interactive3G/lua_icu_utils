@@ -17,6 +17,9 @@ int luaopen_icu_utils(lua_State * l) {
   lua_pushcclosure(l, latinize, 0);
   lua_setfield(l, -2, "latinize");
 
+  lua_pushcclosure(l, latinize_from, 0);
+  lua_setfield(l, -2, "latinize_from");
+
   lua_pushcclosure(l, strtoupper, 0);
   lua_setfield(l, -2, "upper");
 

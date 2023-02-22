@@ -7,7 +7,7 @@ CC = gcc
 # We just provide sane defaults for case when make is called without
 # luarocks (in dev environment).
 CFLAGS = -O2 -fPIC
-LUA_INCDIR = /usr/share/nginx-openresty/luajit/include/luajit-2.1
+LUA_INCDIR = /usr/local/openresty/luajit/include/luajit-2.1
 LDFLAGS = -shared
 
 # Combined flags

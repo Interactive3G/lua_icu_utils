@@ -83,3 +83,95 @@ int latinize(lua_State *l) {
 
   return 1;
 }
+
+// Performs string transliteration and converts any accented characters into
+// their plain version.
+int latinize_from(lua_State *l) {
+  const char * _from = luaL_checkstring(l, 1);
+  int32_t _from_len = strlen(_from);
+
+  int32_t _from_str_len;
+  UChar * _from_str = convert_str(_from, _from_len, &_from_str_len);
+
+  if(!_from_str) {
+    // Empty string
+    if(!_from_str_len) {
+      lua_pushstring(l, "");
+      return 1;
+    } else {
+      return luaL_error(l, "Unable to decode language from UTF-8.");
+    }
+  }
+
+  const char * data = luaL_checkstring(l, 2);
+  int32_t data_len = strlen(data);
+
+  int32_t str_len;
+  UChar * str = convert_str(data, data_len, &str_len);
+
+  if(!str) {
+    // Empty string
+    if(!str_len) {
+      lua_pushstring(l, "");
+      return 1;
+    } else {
+      return luaL_error(l, "Unable to decode string from UTF-8.");
+    }
+  }
+
+  // Create transliterator
+  DEF_UTF16_LITERAL(translit_id, _from);
+  UErrorCode status = U_ZERO_ERROR;
+  UTransliterator * trans = utrans_openU(translit_id, -1, UTRANS_FORWARD, NULL, 0, NULL, &status);
+
+  if(!trans) {
+    free(str);
+    return luaL_error(l, "Unable to initialize ICU transliterator.");
+  }
+
+  // Transliterate the string
+  int32_t out_len = str_len;
+  int32_t limit = str_len;
+
+  utrans_transUChars(trans, str, &out_len, str_len, 0, &limit, &status);
+  if(U_FAILURE(status)) {
+    // We might just need to resize the buffer because transliterated version
+    // might be sometime longer than the original (ie. U+0152).
+    if(status == U_BUFFER_OVERFLOW_ERROR && out_len != str_len) {
+      UChar * new_str = realloc(str, sizeof(UChar) * (out_len + 1));
+      if(!new_str) {
+        free(str);
+        utrans_close(trans);
+        return luaL_error(l, "Unable to allocate more memory.");
+      }
+
+      int32_t out_len2 = str_len;
+      limit = str_len;
+      status = U_ZERO_ERROR;
+
+      utrans_transUChars(trans, new_str, &out_len2, out_len, 0, &limit, &status);
+      if(U_FAILURE(status)) {
+        free(new_str);
+        utrans_close(trans);
+        return luaL_error(l, "Unable to translit the string. Error code: %d.", status);
+      }
+
+      str = new_str;
+      out_len = out_len2;
+
+    } else {
+      free(str);
+      utrans_close(trans);
+      return luaL_error(l, "Unable to translit the string.");
+    }
+  }
+
+  // Close transliterator, we already have the result
+  utrans_close(trans);
+
+  push_str(l, str, out_len);
+  free(str);
+
+  return 1;
+}
+
