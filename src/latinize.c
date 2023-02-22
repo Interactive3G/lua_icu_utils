@@ -88,21 +88,6 @@ int latinize(lua_State *l) {
 // their plain version.
 int latinize_from(lua_State *l) {
   const char * _from = luaL_checkstring(l, 1);
-  int32_t _from_len = strlen(_from);
-
-  int32_t _from_str_len;
-  UChar * _from_str = convert_str(_from, _from_len, &_from_str_len);
-
-  if(!_from_str) {
-    // Empty string
-    if(!_from_str_len) {
-      lua_pushstring(l, "");
-      return 1;
-    } else {
-      return luaL_error(l, "Unable to decode language from UTF-8.");
-    }
-  }
-
   const char * data = luaL_checkstring(l, 2);
   int32_t data_len = strlen(data);
 
